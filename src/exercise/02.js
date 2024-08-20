@@ -2,13 +2,7 @@
 // http://localhost:3000/isolated/exercise/02.js
 
 import * as React from 'react'
-import {
-  fetchPokemon,
-  PokemonForm,
-  PokemonDataView,
-  PokemonInfoFallback,
-  PokemonErrorBoundary,
-} from '../pokemon'
+import {fetchPokemon, PokemonDataView, PokemonErrorBoundary, PokemonForm, PokemonInfoFallback} from '../pokemon'
 
 function asyncReducer(state, action) {
   switch (action.type) {
@@ -27,13 +21,14 @@ function asyncReducer(state, action) {
   }
 }
 
-function useAsync(asyncCallback, initialState, dependencies) {
+function useAsync(asyncCallback, initialState) {
   const [state, dispatch] = React.useReducer(asyncReducer, {
     status: 'idle',
     data: null,
     error: null,
     ...initialState,
   })
+  const {data, error, status} = state
 
   React.useEffect(() => {
     const promise = asyncCallback()
@@ -49,20 +44,21 @@ function useAsync(asyncCallback, initialState, dependencies) {
         dispatch({type: 'rejected', error})
       },
     )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, dependencies)
+  }, [asyncCallback])
   return state
 }
 
 function PokemonInfo({pokemonName}) {
+  const asyncCallback = React.useCallback(() => {
+    if (!pokemonName) {
+      return
+    }
+    return fetchPokemon(pokemonName)
+  }, [pokemonName])
+
   const state = useAsync(
-    () => {
-      if (!pokemonName) {
-        return
-      }
-      return fetchPokemon(pokemonName)
-    }, {status: pokemonName ? 'pending' : 'idle'},
-    [pokemonName])
+    asyncCallback,
+    {status: pokemonName ? 'pending' : 'idle'})
 
   const {data: pokemon, status, error} = state
 
